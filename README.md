@@ -1,44 +1,32 @@
 # Secure TDD for Claude Code
 
-> **Claude Code distribution of the Secure TDD framework.** Integrates Test-Driven Development (TDD) and QA with proactive security guardrails into the Claude Code CLI assistant.
+> **Secure Test-Driven Development (Secure TDD) workflow instructions, skills, and pre-tool hooks for Claude Code CLI agents.**
 
-This repository is a downstream distribution generated from the canonical upstream repository:
-**[secure-tdd-agent-framework](https://github.com/example/secure-tdd-agent-framework)**.
-
----
+This repository is the dedicated Claude Code distribution of the **[Secure TDD Agent Framework](https://github.com/h3xar0n/secure-tdd-agent-framework)**.
 
 ## What's Included
 
-- **`CLAUDE.md`**: Always-on Claude Code project instructions for the 4-phase Secure TDD workflow (Plan -> Red -> Green -> Refactor & Evolve).
-- **`.claude/skills/`**: Kebab-case modular skills:
-  - `threat-model-assessor`: Scopes features and maps STRIDE boundaries in `threat_model.md`.
-  - `security-test-writer`: Writes failing functional QA & security boundary tests (RED).
-  - `defensive-developer`: Implements clean production code and defensive patterns (GREEN).
-  - `local-refactor-scanner`: Cleans code, runs regression tests, and executes local SAST scans (REFACTOR).
-  - `skill-evolution-updater`: Captures systemic lessons into `CONTEXT.md` and `SKILL.md`.
-  - `history-context-seeder`: Seeds context from VCS commit history on onboarding.
-- **`.claude/settings.json` & `.claude/hooks/`**: Claude Code `PreToolUse` bash interceptors for `git push` (CodeMender & Semgrep).
-- **`CONTEXT.md`**: Living architectural boundaries and evolved project rules.
+- `CLAUDE.md`: System prompt instructions loaded on Claude Code session start to enforce the 4-phase inner loop (`PLAN` -> `RED` -> `GREEN` -> `REFACTOR`).
+- `.claude/skills/`: Specialized kebab-case agent skills for threat modeling, security test writing, defensive coding, and refactor scanning.
+- `.claude/settings.json` & `.claude/hooks/security_gate_hook.sh`: PreToolUse bash hook enforcing test-first verification before `git push` runs.
+- `CONTEXT.md`: Living repository context, trust boundaries, and approved helpers.
 
----
+## Getting Started
 
-## Quickstart
-
-1. Copy `CLAUDE.md`, `CONTEXT.md`, and `.claude/` into your project root:
+1. Open this repository in your terminal and launch Claude Code:
    ```bash
-   cp CLAUDE.md CONTEXT.md /path/to/your/project/
-   cp -r .claude /path/to/your/project/
+   claude
    ```
-2. If using Semgrep instead of CodeMender:
-   ```bash
-   cp .claude/settings.semgrep.json .claude/settings.json
-   ```
-3. Run the offline hook test suite to verify:
+2. Claude Code automatically ingests `CLAUDE.md` and discovers skills in `.claude/skills/`.
+3. Test the local pre-tool hook:
    ```bash
    bash .claude/hooks/tests/run_tests.sh
    ```
 
----
+## Upstream Canonical Framework
+
+All skills, rules, and threat models are maintained in the canonical upstream repository:  
+🔗 **[h3xar0n/secure-tdd-agent-framework](https://github.com/h3xar0n/secure-tdd-agent-framework)**
 
 ## License
 
