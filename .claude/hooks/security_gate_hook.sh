@@ -1,13 +1,6 @@
 #!/bin/bash
-# CodeMender security gate - Claude Code PreToolUse hook for `git push`.
-#
-# Wired up from .claude/settings.json:
-#   matcher: "Bash", if: "Bash(git push*)"
-#
-# Claude Code hook contract (https://code.claude.com/docs/en/hooks):
-#   - stdin:  JSON with .tool_name / .tool_input.command / ...
-#   - stdout: JSON with hookSpecificOutput.permissionDecision
-#             "allow" | "deny", exit 0
+# CodeMender security gate - Antigravity pre-push hook, matched via
+# .agents/hooks.json ("git push*").
 #
 # Outcome model (see threat_model.md at the repo root for the full design):
 #   PASS      - scan ran, no findings.
@@ -27,30 +20,12 @@
 # `cm verify` (exploitability check) is expensive - it is only ever
 # invoked from the escalation branch (auto-fix failed, or the fix diff is
 # too large to trust automatically), never on the common-case path.
-#
-# NOTE: stdin is consumed below to read the hook payload, so this script
-# can no longer read the RED/GREEN prompts from stdin the way the original
-# Antigravity script did. The interactive `read -p` calls are redirected to
-# /dev/tty instead, which only works when Claude Code is attached to a real
-# terminal. In headless/CI runs those prompts fail closed (empty answer),
-# i.e. unresolved blocking findings deny the push rather than silently
-# passing - see SECURITY_GATE_MAX_RETRIES / escalation below.
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/gate_common.sh
 source "$SCRIPT_DIR/lib/gate_common.sh"
-
-INPUT=$(cat)
-COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
-
-# Defense in depth: only run the gate for git push, even if the
-# matcher/`if` config above ever changes.
-case "$COMMAND" in
-  *"git push"*) ;;
-  *) allow ;;
-esac
 
 command -v cm >/dev/null 2>&1 || handle_scan_error "codemender" "the 'cm' CLI is not on PATH"
 
@@ -138,7 +113,7 @@ while IFS= read -r finding <&3; do
 
   echo "Vulnerability detected: $FINDING_ID ($SEV) in $FILE" >&2
   echo "Before applying the fix, you must write a reproducing test that fails (RED)." >&2
-  read -p "Add the test and press Enter once it is verified failing..." < /dev/tty > /dev/tty 2>&1 || true
+  read -p "Add the test and press Enter once it is verified failing..."
 
   RETRY_COUNT=0
   RESOLVED=false
@@ -208,11 +183,11 @@ while IFS= read -r finding <&3; do
     echo "1) Defer/mute with justification (logged + notified; push proceeds)" >&2
     echo "2) Check exploitability via 'cm verify' (slow - only use this if you need the answer to decide)" >&2
     echo "3) Abort and fix manually (blocks push)" >&2
-    read -p "Enter choice [1-3]: " CHOICE < /dev/tty > /dev/tty 2>&1 || CHOICE=""
+    read -p "Enter choice [1-3]: " CHOICE
 
     case "$CHOICE" in
       1)
-        read -p "Enter deferral justification: " JUSTIFICATION < /dev/tty > /dev/tty 2>&1 || JUSTIFICATION="unspecified"
+        read -p "Enter deferral justification: " JUSTIFICATION
         git checkout -- .
         log_event "ADVISORY" "codemender" "$(jq -n --argjson f "$finding" --arg j "$JUSTIFICATION" '{findings:[$f], justification:$j}')"
         notify "ADVISORY" "Finding $FINDING_ID ($SEV) deferred by $(git config user.email 2>/dev/null || echo unknown): $JUSTIFICATION" \

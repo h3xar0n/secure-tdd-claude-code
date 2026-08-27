@@ -10,7 +10,9 @@ Decompose feature requirements, establish functional acceptance criteria, and ma
 
 ## System Sequence
 1. **Ingest Context**: Read `CONTEXT.md` to identify existing architecture, trust boundaries, approved libraries, and conventions.
-2. **Decompose Requirements**: Define user stories, input/output contracts, and functional acceptance criteria. Break complex tasks into testable implementation stages.
+2. **Decompose Requirements**:
+   - Define user stories, input/output data contracts, and functional acceptance criteria.
+   - Break complex tasks into bite-sized, testable implementation stages.
 3. **Apply STRIDE Threat Modeling**:
    - **Spoofing**: Authentication boundaries, session validation, caller identity checks.
    - **Tampering**: Input payload validation, integrity checks, parameter tampering.
@@ -21,3 +23,23 @@ Decompose feature requirements, establish functional acceptance criteria, and ma
 4. **Generate/Update `threat_model.md`**:
    - Store or update `threat_model.md` at the workspace root with both Functional & Security Acceptance Criteria.
 
+## Target Output Artifact (`threat_model.md`)
+```markdown
+# Feature Plan & Threat Model: [Feature Name]
+
+## 1. Functional Scope & Requirements
+- **Goal**: [Description of feature or bug fix]
+- **Deliverables**: [Endpoints, functions, or modules to create/modify]
+- **Functional Acceptance Criteria**: [Expected behaviors and outputs]
+
+## 2. Entry Points & Data Inputs
+- Endpoint / Input: [Path / Name]
+- Format & Constraints: [Schema / Type]
+
+## 3. Trust Boundaries & Access Controls
+- Authentication: [Required / Public]
+- Authorization Role: [User / Admin]
+
+## 4. STRIDE Threat Matrix & Security Acceptance Criteria
+- [STRIDE Category]: [Threat Description] -> [Required Mitigation & Test Assertion]
+```

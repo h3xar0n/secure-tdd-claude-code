@@ -1,14 +1,12 @@
 #!/bin/bash
-# Semgrep security gate - Claude Code PreToolUse hook for `git push`.
-# Open-source alternative to security_gate_hook.sh for when CodeMender
-# access isn't available. Wired up from .claude/settings.semgrep.json
-# (rename that file to settings.json to activate it).
+# Semgrep security gate - Antigravity pre-push hook, matched via
+# .agents/hooks_semgrep.json ("git push*"). Open-source alternative to
+# security_gate_hook.sh for when CodeMender access isn't available.
 #
 # Unlike the CodeMender script, this one never prompts interactively and
-# never auto-fixes: it just reports findings back to Claude via
-# permissionDecisionReason, and the agent is expected to fix them itself
-# (guided by the secure-coding and test-driven-development skills) before
-# pushing again.
+# never auto-fixes: it just reports findings back to the agent, which is
+# expected to fix them itself (guided by the secure-coding and
+# test-driven-development skills) before pushing again.
 #
 # Outcome model (see threat_model.md at the repo root):
 #   PASS      - scan ran, no findings.
@@ -27,14 +25,6 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/gate_common.sh
 source "$SCRIPT_DIR/lib/gate_common.sh"
-
-INPUT=$(cat)
-COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
-
-case "$COMMAND" in
-  *"git push"*) ;;
-  *) allow ;;
-esac
 
 command -v semgrep >/dev/null 2>&1 || handle_scan_error "semgrep" "the 'semgrep' CLI is not on PATH"
 
@@ -114,7 +104,7 @@ echo "$FINDINGS_DESC" >&2
 
 log_event "BLOCKED" "semgrep" "$(jq -n --argjson f "$BLOCKING_JSON" '{findings:$f}')"
 
-REASON="Semgrep detected $BLOCK_COUNT security issue(s) at/above the $SECURITY_GATE_BLOCK_SEVERITY threshold in your changes. Fix them (using the secure-coding and test-driven-development skills) before pushing:
+REASON="Semgrep detected $BLOCK_COUNT security issue(s) at/above the $SECURITY_GATE_BLOCK_SEVERITY threshold in your changes. You must fix them before pushing:
 $FINDINGS_DESC"
 
 deny "$REASON"

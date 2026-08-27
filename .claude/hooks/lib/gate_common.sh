@@ -1,11 +1,14 @@
 #!/bin/bash
-# Shared helpers for the Claude Code security gate hooks (CodeMender and
-# Semgrep variants). Sourced, not executed directly. See threat_model.md
-# at the repo root for the design this implements (PASS / ADVISORY /
-# ERROR / BLOCKED outcomes, severity-based fail-open, and why `cm verify`
-# is never called on the happy path).
+# Shared helpers for the Antigravity security gate hooks (CodeMender and
+# Semgrep variants). Sourced, not executed directly. This is a port of
+# claude-code/.claude/hooks/lib/gate_common.sh - same logic, different
+# hook envelope ({"allow_tool": ...} instead of Claude Code's
+# hookSpecificOutput.permissionDecision). See threat_model.md at the repo
+# root for the design (PASS / ADVISORY / ERROR / BLOCKED outcomes,
+# severity-based fail-open, and why `cm verify` is never called on the
+# happy path).
 
-# --- Config (override via env, or "env" in .claude/settings.json) ---
+# --- Config (override via env, or Antigravity's hook env config) ---
 : "${SECURITY_GATE_BLOCK_SEVERITY:=HIGH}"        # findings at/above this rank block; below are advisory
 : "${SECURITY_GATE_ALLOW_ON_ERROR:=false}"       # true = let the push through when the scanner itself fails to run
 : "${SECURITY_GATE_LARGE_FIX_LINES:=50}"         # cm fix diffs bigger than this escalate instead of auto-committing
@@ -20,16 +23,15 @@ _gate_repo_root() {
 
 : "${SECURITY_GATE_LOG:=$(_gate_repo_root)/.security-gate/findings-log.ndjson}"
 
-# --- Claude Code PreToolUse hook envelope ---
+# --- Antigravity hook envelope ---
 allow() {
-  jq -n '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "allow"}}'
+  echo '{"allow_tool": true}'
   exit 0
 }
 
 deny() {
   local reason="$1"
-  jq -n --arg reason "$reason" \
-    '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $reason}}'
+  jq -n --arg reason "$reason" '{allow_tool: false, reason: $reason}'
   exit 0
 }
 
@@ -60,9 +62,9 @@ is_blocking_severity() {
 # Best-effort: a logging failure must never itself block or crash the hook.
 log_event() {
   local event="$1" tool="$2" extra="$3"
-  # NOTE: intentionally not `extra="${3:-{}}"` - bash doesn't brace-match
-  # inside a ${var:-word} default, so that idiom parses as `${3:-{}`
-  # plus a stray literal `}` appended after every non-empty $3, producing
+  # NOTE: deliberately not `extra="${3:-{}}"` - bash doesn't brace-match
+  # inside a ${var:-word} default, so that idiom parses as `${3:-{}` plus
+  # a stray literal `}` appended after every non-empty $3, producing
   # invalid JSON that jq would silently reject below.
   [ -z "$extra" ] && extra="{}"
   mkdir -p "$(dirname "$SECURITY_GATE_LOG")" 2>/dev/null || true
@@ -80,11 +82,10 @@ log_event() {
 }
 
 # notify EVENT MESSAGE EXTRA_JSON
-# Always prints a loud stderr banner (so it's visible in an interactive
-# session even without a notify command configured); also invokes
-# SECURITY_GATE_NOTIFY_CMD with a JSON payload on stdin if set, so another
-# team/channel can be looped in without depending on the developer to
-# relay it themselves. A failing notify command is logged, not fatal.
+# Always prints a loud stderr banner; also invokes SECURITY_GATE_NOTIFY_CMD
+# with a JSON payload on stdin if set, so another team/channel can be
+# looped in without depending on the developer to relay it themselves.
+# A failing notify command is logged, not fatal.
 notify() {
   local event="$1" message="$2" extra="$3"
   [ -z "$extra" ] && extra="{}"
